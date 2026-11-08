@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Minecraft LiDAR - Psychological Horror (Whisper Audio Update)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Courier New', monospace;
+            touch-action: none;
+        }
+        #canvasContainer {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #00ff66;
+            background: rgba(5, 12, 5, 0.88);
+            padding: 10px 14px;
+            border: 2px solid #00ff66;
+            z-index: 10;
+            box-shadow: 0 0 12px rgba(0, 255, 102, 0.3);
+            max-width: 280px;
+            font-size: 13px;
+            pointer-events: none;
+        }
+        #startBtn {
+            margin-top: 8px;
+            padding: 8px 15px;
+            background: #00ff66;
+            color: #000;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: monospace;
+            font-size: 13px;
+            text-transform: uppercase;
+            box-shadow: 0 0 10px #00ff66;
+            width: 100%;
+            pointer-events: auto;
+        }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff66;
+            font-size: 24px;
+            pointer-events: none;
+            z-index: 10;
+            text-shadow: 0 0 5px #00ff66;
+        }
+        #minimap {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            border: 2px solid #00ff66;
+            background: #000;
+            z-index: 10;
+            width: 110px;
+            height: 85px;
+            pointer-events: none;
+        }
+        .level-header {
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #ffffff;
+            border-bottom: 1px solid #00ff66;
+            padding-bottom: 3px;
+            margin-bottom: 5px;
+        }
+        .battery-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #111;
+            margin-top: 4px;
+            border: 1px solid #00ff66;
+        }
+        #batteryBar {
+            width: 100%;
+            height: 100%;
+            background: #00ff66;
+        }
+        #whisperText {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff3344;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 12px #ff0000;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none;
+            z-index: 20;
+            letter-spacing: 2px;
+            text-align: center;
+            width: 90%;
+        }
+
+        /* --- TOUCH CONTROLS OVERLAY --- */
+        .mobile-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 15;
+            display: none;
+        }
+        #joystickContainer {
+            position: absolute;
+            bottom: 35px;
+            left: 35px;
+            width: 120px;
+            height: 120px;
+            background: rgba(0, 255, 102, 0.1);
+            border: 2px solid rgba(0, 255, 102, 0.4);
+            border-radius: 50%;
+            pointer-events: auto;
+            touch-action: none;
+        }
+        #joystickKnob {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 46px;
+            height: 46px;
+            background: rgba(0, 255, 102, 0.7);
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px #00ff66;
+        }
+        .touch-action-btn {
+            position: absolute;
+            background: rgba(0, 255, 102, 0.2);
+            border: 2px solid #00ff66;
+            color: #00ff66;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            pointer-events: auto;
+            touch-action: none;
+            box-shadow: 0 0 10px rgba(0,255,102,0.3);
+        }
+        .touch-action-btn:active, .touch-action-btn.active {
+            background: rgba(0, 255, 102, 0.8);
+            color: #000;
+        }
+        #scanBtnMobile {
+            bottom: 35px;
+            right: 35px;
+            width: 80px;
+            height: 80px;
+            font-size: 13px;
+        }
+        #jumpBtnMobile {
+            bottom: 130px;
+            right: 45px;
+            width: 60px;
+            height: 60px;
+            font-size: 12px;
+        }
+
+        /* --- COVER OVERLAY --- */
+        #coverOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at center, #0a150a 0%, #000000 90%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #00ff66;
+            text-align: center;
+            box-sizing: border-box;
+            padding: 20px;
+        }
+        .cover-title-main {
+            font-size: 38px;
+            font-weight: 900;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px #00ff66;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+        .cover-sub {
+            font-size: 16px;
+            color: #88ffaa;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+        .cover-box {
+            border: 2px solid #00ff66;
+            background: rgba(0, 20, 5, 0.85);
+            padding: 20px;
+            max-width: 520px;
+            width: 100%;
+            box-shadow: 0 0 25px rgba(0, 255, 102, 0.2);
+            margin-bottom: 20px;
+        }
+        .cover-box p {
+            margin: 6px 0;
+            line-height: 1.5;
+            font-size: 13px;
+            color: #ccffdd;
+        }
+
+        .mode-selection-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+        .mode-btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            width: 100%;
+            max-width: 480px;
+        }
+        .mode-btn {
+            flex: 1;
+            padding: 15px 10px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #00ff66;
+            background: rgba(0, 30, 10, 0.8);
+            border: 2px solid #00ff66;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
+            font-family: inherit;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .mode-btn span {
+            font-size: 11px;
+            color: #88ffaa;
+            font-weight: normal;
+        }
+        .mode-btn:hover {
+            transform: scale(1.05);
+            background: #00ff66;
+            color: #000000;
+            box-shadow: 0 0 25px #00ff66;
+        }
+        .mode-btn:hover span {
+            color: #111111;
+        }
+
+        /* --- ENDING OVERLAY --- */
+        #endingOverlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 200;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #00ff66;
+            text-align: center;
+            padding: 25px;
+            box-sizing: border-box;
+        }
+        .ending-title {
+            font-size: 32px;
+            color: #00ff66;
+            text-shadow: 0 0 25px #00ff66;
+            margin-bottom: 15px;
+        }
+        .ending-quote {
+            font-size: 15px;
+            color: #aaffcc;
+            max-width: 550px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            border-left: 3px solid #00ff66;
+            padding-left: 15px;
+            text-align: left;
+        }
+        .restart-btn {
+            padding: 12px 30px;
+            background: transparent;
+            border: 2px solid #00ff66;
+            color: #00ff66;
+            font-size: 15px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .restart-btn:hover {
+            background: #00ff66;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvasContainer"></div>
+
+    <!-- COVER SCREEN -->
+    <div id="coverOverlay">
+        <div class="cover-title-main">MINECRAFT LiDAR</div>
+        <div class="cover-sub">PSYCHOLOGICAL HORROR</div>
+        <div class="cover-box">
+            <p><b>[ คำเตือน ]</b></p>
+            <p>คุณติดอยู่ในมิติมืดที่ถูกทิ้งร้างไร้แสงสว่าง</p>
+            <p>มองเห็นเฉพาะจุดพิกเซล LiDAR จากเครื่องสแกน</p>
+            <p style="color:#ff5566;">• ไม่มีอสูรกายทำร้ายร่างกาย มีเพียงเสียงลมหวีดหวิวและกระซิบปริศนาที่ฟังไม่เข้าเรื่อง</p>
+        </div>
+
+        <div class="mode-selection-title">กรุณาเลือกโหมดอุปกรณ์การเล่น</div>
+        <div class="mode-btn-group">
+            <button class="mode-btn" id="selectPcBtn">
+                💻 คอมพิวเตอร์ (PC)
+                <span>ใช้ WASD + เม้าส์ + คลิกซ้าย</span>
+            </button>
+            <button class="mode-btn" id="selectMobileBtn">
+                📱 มือถือ / iPad
+                <span>ใช้ จอยสติ๊ก + สัมผัสหน้าจอ</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- GAME ENDING SCREEN -->
+    <div id="endingOverlay">
+        <div class="ending-title">บทสรุปแห่งความเงียบสงบ</div>
+        <div class="ending-quote">
+            "คุณก้าวผ่าน 10 ระดับมิติมืดอันยะเยือก...<br><br>
+            ไม่มีเงาร้ายใดๆ พุ่งเข้าทำร้ายคุณเลยแม้แต่ครั้งเดียว สิ่งที่น่ากลัวที่สุดไม่ใช่สิ่งเร้นกายในความมืด หากแต่คือความกลัวที่จิตใจของเราสร้างขึ้นมาเองในความเงียบสงัด...<br><br>
+            คุณรอดชีวิตและหนีออกจากมิติมืดได้สำเร็จ"
+        </div>
+        <button class="restart-btn" onclick="location.reload()">เล่นใหม่อีกครั้ง</button>
+    </div>
+
+    <!-- IN-GAME HUD -->
+    <div id="ui">
+        <div class="level-header" id="levelTitle">LEVEL 1</div>
+        <h2 id="levelDesc" style="margin:3px 0; font-size:14px;">...</h2>
+        <div>ระยะสแกน: <span id="diffText" style="color:#00ff66;">...</span></div>
+        <div>สถานะ: <span id="status" style="color:#ff4444;">รอเชื่อมต่อ</span></div>
+        
+        <div style="margin-top: 4px; font-size:11px;">พลังงานสแกนเนอร์:</div>
+        <div class="battery-bar-container">
+            <div id="batteryBar"></div>
+        </div>
+
+        <button id="startBtn">เริ่มสแกน (CLICK TO PLAY)</button>
+        <div id="codeInstructions" style="font-size: 10px; margin-top:4px; color:#88ffaa;">...</div>
+    </div>
+
+    <!-- MOBILE TOUCH UI OVERLAY -->
+    <div class="mobile-controls" id="mobileControls">
+        <div id="joystickContainer">
+            <div id="joystickKnob"></div>
+        </div>
+        <div class="touch-action-btn" id="jumpBtnMobile">JUMP</div>
+        <div class="touch-action-btn" id="scanBtnMobile">SCAN</div>
+    </div>
+
+    <div id="crosshair">+</div>
+    <div id="whisperText">...</div>
+    <canvas id="minimap" width="160" height="120"></canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        let currentPlatformMode = 'PC';
+
+        // SOUND ENGINE FOR WIND & UNINTELLIGIBLE VOICES
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // เสียงลมและเสียงกระซิบอู้อี้ฟังไม่รู้เรื่อง
+        function playUnintelligibleWhisper() {
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            const duration = 3.8;
+            const sampleRate = audioCtx.sampleRate;
+            const bufferSize = sampleRate * duration;
+            const buffer = audioCtx.createBuffer(1, bufferSize, sampleRate);
+            const data = buffer.getChannelData(0);
+
+            // สังเคราะห์คลื่นเสียงลมผสมจังหวะพยางค์คำกระซิบอู้อี้
+            for (let i = 0; i < bufferSize; i++) {
+                const t = i / sampleRate;
+                const windNoise = Math.random() * 2 - 1;
+                // จังหวะพยางค์คำพูดกระซิบ (Modulation)
+                const voiceSyllableMod = Math.sin(t * 18 + Math.sin(t * 3) * 5);
+                data[i] = windNoise * (0.4 + 0.6 * voiceSyllableMod);
+            }
+
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+
+            // Bandpass Filter กรองย่านความถี่เสียงกระซิบข้างหู (800Hz - 2200Hz)
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.Q.setValueAtTime(14, now);
+            
+            const startFreq = 300 + Math.random() * 300;
+            const midFreq = 900 + Math.random() * 700;
+            filter.frequency.setValueAtTime(startFreq, now);
+            filter.frequency.exponentialRampToValueAtTime(midFreq, now + 1.2);
+            filter.frequency.exponentialRampToValueAtTime(startFreq * 0.7, now + duration);
+
+            // Gain Envelope
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(0.3, now + 1.0);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+            // Panner (เปลี่ยนทิศทางเสียงข้างซ้าย/ขวาเหมือนมีคนกระซิบอยู่ข้างๆ)
+            const panner = audioCtx.createStereoPanner();
+            panner.pan.setValueAtTime((Math.random() * 2 - 1) * 0.95, now);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(panner);
+            panner.connect(audioCtx.destination);
+
+            noise.start(now);
+        }
+
+        // ข้อความคำหลอน เสียงลม และภาษาฟังไม่รู้เรื่อง
+        const WHISPER_MESSAGES = [
+            "ฟิ้วว... ซูซู่... (เสียงลมกระซิบผ่านหู)",
+            "...ชซซ-กรรร-เสสส... (เสียงกระซิบปริศนา)",
+            "...มมม...อยู่นี่...ซซซ...",
+            "ฟิ้ว... ลมหายใจเย็นเยือกปะทะคอ...",
+            "...ฮฮซซ-เครรร-ทตต... (ภาษาฟังไม่รู้เรื่อง)",
+            "...อย่า...หยุด...เดิน...ซสส...",
+            "วี๊ดดด... (เสียงลมหวีดหวิวผ่านช่องแคบ)",
+            "...ฟฟซซ-เนนน-ราาา...",
+            "...มัน...กำลัง...ตาม...มา...",
+            "...ซซซ-ฮฮฮ-มมม... (เสียงงึมงำในความมืด)"
+        ];
+
+        function triggerCreepyEvent() {
+            playUnintelligibleWhisper();
+            const whisperEl = document.getElementById('whisperText');
+            whisperEl.innerText = WHISPER_MESSAGES[Math.floor(Math.random() * WHISPER_MESSAGES.length)];
+            whisperEl.style.opacity = 1;
+
+            setTimeout(() => {
+                whisperEl.style.opacity = 0;
+            }, 3800);
+        }
+
+        setInterval(() => {
+            if ((isLocked || currentPlatformMode === 'MOBILE') && Math.random() < 0.55) {
+                triggerCreepyEvent();
+            }
+        }, 11000);
+
+        // 10 LEVELS DEFINITIONS
+        const LEVELS = [
+            {
+                name: "LEVEL 1: OAK SHAFTS",
+                desc: "\"เหมืองไม้อันเงียบสงบ\"",
+                instructions: "• 1 = ไม้ | 0 = ทางเดิน | 9 = ทางออก",
+                color: "#00ff66",
+                scanRange: 12,
+                map: [
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+                    [1,0,1,0,1,0,1,1,1,1,1,1,1,0,1],
+                    [1,0,1,0,0,0,1,0,0,0,0,0,1,0,1],
+                    [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1],
+                    [1,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,0,1,0,1,1,1,0,1],
+                    [1,0,0,0,0,0,0,0,1,0,1,9,1,0,1],
+                    [1,0,1,1,1,1,1,1,1,0,1,0,1,0,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                ]
+            },
+            {
+                name: "LEVEL 2: STONE MAZE",
+                desc: "\"เขาวงกตหินหยาบ\"",
+                instructions: "• 1 = หิน | 0 = ทางเดิน | 9 = ทางออก",
+                color: "#99ccff",
+                scanRange: 10,
+                map: [
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,0,1,0,1,1,1,1,1,0,1],
+                    [1,0,0,0,1,0,0,0,1,0,0,0,1,0,1],
+                    [1,0,1,0,1,1,1,1,1,0,1,0,1,0,1],
+                    [1,0,1,0,0,0,0,0,0,0,1,0,0,0,1],
+                    [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],
+                    [1,0,0,0,0,0,1,0,0,0,0,0,1,9,1],
+                    [1,1,1,1,1,0,1,1,1,1,1,0,1,1,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                ]
+            },
+            {
+                name: "LEVEL 3: DEEP DARK CAVES",
+                desc: "\"ถ้ำหินฉลุไร้แร่\"",
+                instructions: "• 1 = หินลึก | 0 = ทางเดิน | 9 = ทางออก",
+                color: "#00ffff",
+                scanRange: 9,
+                map: [
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+                    [1,0,1,0,1,0,1,1,1,0,1,0,1,0,1],
+                    [1,0,1,0,0,0,1,0,1,0,0,0,1,0,1],
+                    [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,1,1,0,1,1,1,1,1,1,1,0,1,1,1],
+                    [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+                    [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
+                    [1,0,0,0,0,0,1,9,1,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                ]
+            },
+            {
+                name: "LEVEL 4: PRISMARINE CHAMBER",
+                desc: "\"วิหารใต้มหาสมุทรไร้น้ำ\"",
+                instructions: "• 1 = ปริสมารีน | 0 = ทางเดิน | 9 = ประตู",
+                color: "#00ffaa",
+                scanRange: 8,
+                map: [
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],
+                    [1,0,1,0,0,0,1,0,1,0,0,0,1,0,1],
+                    [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+                    [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+                    [1,0,1,0,1,1,1,1,1,1,1,0,1,0,1],
+                    [1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+                    [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],
+                    [1,0,0,0,0,0,0,0,1,9,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                ]
+            },
+            {
+                name: "LEVEL 5: NETHER CATALYSIS",
+                desc: "\"ป้อมปราการเนเธอร์ดับแสง\"",
+                instructions: "• 1 = อิฐเนเธอร์ | 0 = ทางเดิน | 9 = ประตู",
+                color: "#ff3333",
+                scanRange: 8,
+                map: [
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+                    [1,1,1,0,1,0,1,1,1,0,1,0,1,1,1],
+                    [1,0,0,0,0,0,1,0,1,0,0,0,0,0,1],
+                    [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],
+                    [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+                    [1,1,1,0,1,0,1,1,1,0,1,0,1,1,1],
+                    [1,0,0,0,0,0,1,9,1,0,0,0,0,0,1],
+                    [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                ]
+            },
+            {
+                name: "LEVEL 6: BASALT DELTAS",
+                desc: "\"โถงหินบะซอลต์ดั่งป่าหิน\"",
+                instructions: "• 1 = บะซอลต์ | 0 = ทางเดิน | 9 = ทางออก",
+                color: "#ff8800",
+                scanRange: 7,
+                map: [
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+                    [1,0,1,1,1,0,1,0,1,1,1,1,1,0,1],
+                    [1,0,1,0,0,0,0,0,1,0,0,0,1,0,1],
+                    [1,0,1,0,1,1,1,1,1,0,1,0,1,0,1],
+                    [1,0,0,0,1,0,0,0,0,0,1,0,0,0,1],
+                    [1,1,1,0,1,0,1,1,1,1,1,1,1,0,1],
+                    [1,0,0,0,0,0,1,0,0,0,0,0,1,0,1],
+                    [1,0,1,1,1,1,1,0,1,1,1,0,1,9,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                ]
+            },
+            {
+                name: "LEVEL 7: SCULK ANCIENT CITY",
+                desc: "\"เมืองโบราณไร้เสียงขยับ\"",
+                instructions: "• 1 = สกัลค์ | 0 = ทางเดิน | 9 = ประตู",
+                color: "#00aaff",
+                scanRange: 7,
+                map: [
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,1,0,0,0,0,0,0,0,0,0,1],
+                    [1,0,1,0,1,0,1,1,1,1,1,1,1,0,1],
+                    [1,0,1,0,0,0,1,0,0,0,0,0,1,0,1],
+                    [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1],
+                    [1,0,0,0,0,0,0,0,1,9,1,0,0,0,1],
+                    [1,1,1,1,1,1,1,0,1,0,1,1,1,0,1],
+                    [1,0,0,0,0,0,0,0,1,0,1,0,1,0,1],
+                    [1,0,1,1,1,1,1,1,1,0,1,0,1,0,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                ]
+            },
+            {
+                name: "LEVEL 8: END BARRENS",
+                desc: "\"ซากวิหารเอนด์ลอยฟ้า\"",
+                instructions: "• 1 = หินเอนด์ | 0 = ทางเดิน | 9 = ทางออก",
+                color: "#ffff88",
+                scanRange: 6,
+                map: [
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,0,1,1,1,1,1,1,1,1,1,1,1,0,1],
+                    [1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+                    [1,0,1,0,1,1,1,0,1,1,1,0,1,0,1],
+                    [1,0,1,0,1,9,1,0,1,0,1,0,1,0,1],
+                    [1,0,1,0,1,1,1,0,1,0,1,0,1,0,1],
+                    [1,0,1,0,0,0,0,0,1,0,0,0,1,0,1],
+                    [1,0,1,1,1,1,1,1,1,1,1,1,1,0,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                ]
+            },
+            {
+                name: "LEVEL 9: VOID LABYRINTH",
+                desc: "\"มิติหุบเหวไร้ก้นบึ้ง\"",
+                instructions: "• 1 = หินวอยด์ | 0 = ทางเดิน | 9 = ประตู",
+                color: "#ff55ff",
+                scanRange: 5,
+                map: [
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,1,0,0,0,1,0,0,0,0,0,1],
+                    [1,1,1,0,1,0,1,0,1,0,1,1,1,0,1],
+                    [1,0,0,0,0,0,1,0,0,0,1,0,0,0,1],
+                    [1,0,1,1,1,1,1,1,1,0,1,0,1,1,1],
+                    [1,0,0,0,1,0,0,0,1,0,1,0,0,0,1],
+                    [1,1,1,0,1,0,1,0,1,0,1,1,1,0,1],
+                    [1,0,0,0,0,0,1,0,0,0,0,0,1,9,1],
+                    [1,0,1,1,1,1,1,1,1,1,1,0,1,1,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                ]
+            },
+            {
+                name: "LEVEL 10: SILENT CORE",
+                desc: "\"แกนกลางแห่งความเงียบสงบ\"",
+                instructions: "• 1 = แบดร็อค | 0 = ทางเดิน | 9 = อิสรภาพ",
+                color: "#ffffff",
+                scanRange: 5,
+                map: [
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1],
+                    [1,0,1,0,0,0,1,0,1,0,0,0,1,0,1],
+                    [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1],
+                    [1,0,1,0,1,0,0,0,0,0,1,0,1,0,1],
+                    [1,0,1,0,1,1,1,1,1,1,1,0,1,0,1],
+                    [1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],
+                    [1,0,1,1,1,1,1,1,1,1,1,1,1,0,1],
+                    [1,0,0,0,0,0,0,0,0,0,0,0,0,9,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+                ]
+            }
+        ];
+
+        let currentLevelIdx = 0;
+        const TILE_SIZE = 3;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvasContainer').appendChild(renderer.domElement);
+
+        let MAP = LEVELS[0].map;
+        let MAP_ROWS = MAP.length;
+        let MAP_COLS = MAP[0].length;
+
+        let invisibleColliders = [];
+        let spawnedPoints = new Set();
+        const GRID_CELL_SIZE = 0.25;
+
+        let battery = 100;
+
+        function loadLevel(idx) {
+            for (let i = scene.children.length - 1; i >= 0; i--) {
+                const obj = scene.children[i];
+                if (obj !== camera) {
+                    scene.remove(obj);
+                }
+            }
+
+            invisibleColliders = [];
+            spawnedPoints.clear();
+            battery = 100;
+
+            currentLevelIdx = idx;
+            const lvl = LEVELS[idx];
+            MAP = lvl.map;
+            MAP_ROWS = MAP.length;
+            MAP_COLS = MAP[0].length;
+
+            document.getElementById('levelTitle').innerText = lvl.name;
+            document.getElementById('levelDesc').innerText = lvl.desc;
+            document.getElementById('diffText').innerText = lvl.scanRange + "m";
+            document.getElementById('diffText').style.color = lvl.color;
+            document.getElementById('codeInstructions').innerText = lvl.instructions;
+
+            document.getElementById('ui').style.borderColor = lvl.color;
+            document.getElementById('ui').style.color = lvl.color;
+            document.getElementById('startBtn').style.backgroundColor = lvl.color;
+            document.getElementById('startBtn').style.boxShadow = `0 0 8px ${lvl.color}`;
+            document.getElementById('minimap').style.borderColor = lvl.color;
+            document.getElementById('crosshair').style.color = lvl.color;
+
+            const floorGeometry = new THREE.PlaneGeometry(TILE_SIZE, TILE_SIZE);
+            const invisibleMat = new THREE.MeshBasicMaterial({ depthWrite: false, colorWrite: false });
+
+            for (let r = 0; r < MAP_ROWS; r++) {
+                for (let c = 0; c < MAP_COLS; c++) {
+                    const x = c * TILE_SIZE;
+                    const z = r * TILE_SIZE;
+
+                    const floor = new THREE.Mesh(floorGeometry, invisibleMat);
+                    floor.rotation.x = -Math.PI / 2;
+                    floor.position.set(x, 0, z);
+                    floor.userData = { type: 'floor', char: '0' };
+                    scene.add(floor);
+                    invisibleColliders.push(floor);
+
+                    const tile = MAP[r][c];
+                    if (tile === 1) {
+                        const h = TILE_SIZE * 2;
+                        const bGeo = new THREE.BoxGeometry(TILE_SIZE, h, TILE_SIZE);
+                        const bldg = new THREE.Mesh(bGeo, invisibleMat);
+                        bldg.position.set(x, h / 2, z);
+                        bldg.userData = { type: 'wall', char: '1' };
+                        scene.add(bldg);
+                        invisibleColliders.push(bldg);
+                    } else if (tile === 9) {
+                        const exitGeo = new THREE.BoxGeometry(TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        const exit = new THREE.Mesh(exitGeo, invisibleMat);
+                        exit.position.set(x, TILE_SIZE / 2, z);
+                        exit.userData = { type: 'exit', char: '9' };
+                        scene.add(exit);
+                        invisibleColliders.push(exit);
+                    }
+                }
+            }
+
+            camera.position.set(1 * TILE_SIZE, 1.2, 1 * TILE_SIZE);
+        }
+
+        const textureCache = {};
+        function getNumberTexture(text, color) {
+            const key = text + '_' + color;
+            if (textureCache[key]) return textureCache[key];
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = color;
+            ctx.font = 'bold 44px monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 32, 32);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            textureCache[key] = texture;
+            return texture;
+        }
+
+        function createTextSprite(text, color) {
+            const texture = getNumberTexture(text, color);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: true });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(0.28, 0.28, 1);
+            return sprite;
+        }
+
+        const raycaster = new THREE.Raycaster();
+        let isScanningActive = false;
+
+        function fireLidarScan() {
+            if (battery <= 0) return;
+
+            battery = Math.max(0, battery - 0.4);
+
+            const lvl = LEVELS[currentLevelIdx];
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            const centerCheck = raycaster.intersectObjects(invisibleColliders);
+            
+            let dist = lvl.scanRange;
+            if (centerCheck.length > 0) {
+                dist = Math.min(lvl.scanRange, centerCheck[0].distance);
+            }
+
+            const numRays = Math.max(4, Math.min(32, Math.floor(dist * 3)));
+            const spreadAngle = 0.55;
+
+            for (let i = 0; i < numRays; i++) {
+                const angleX = (Math.random() - 0.5) * spreadAngle;
+                const angleY = (Math.random() - 0.5) * spreadAngle;
+
+                const dir = new THREE.Vector3(angleX, angleY, -1).normalize();
+                dir.applyQuaternion(camera.quaternion);
+
+                raycaster.set(camera.position, dir);
+                const intersects = raycaster.intersectObjects(invisibleColliders);
+
+                if (intersects.length > 0) {
+                    const hit = intersects[0];
+                    if (hit.distance > lvl.scanRange) continue;
+                    
+                    const gridX = Math.round(hit.point.x / GRID_CELL_SIZE);
+                    const gridY = Math.round(hit.point.y / GRID_CELL_SIZE);
+                    const gridZ = Math.round(hit.point.z / GRID_CELL_SIZE);
+                    const cellKey = `${gridX}_${gridY}_${gridZ}`;
+
+                    if (spawnedPoints.has(cellKey)) continue;
+                    spawnedPoints.add(cellKey);
+
+                    let color = lvl.color;
+                    let char = hit.object.userData.char || '1';
+
+                    if (hit.object.userData.type === 'floor') {
+                        color = '#444444';
+                    } else if (hit.object.userData.type === 'exit') {
+                        color = '#ffffff';
+                    }
+
+                    const dot = createTextSprite(char, color);
+                    dot.position.copy(hit.point).addScaledVector(hit.face.normal, 0.02);
+                    scene.add(dot);
+                }
+            }
+        }
+
+        // TOUCH AND MOBILE CONTROLS SYSTEM
+        let isLocked = false;
+        let yaw = 0;
+        let pitch = 0;
+
+        const joystickContainer = document.getElementById('joystickContainer');
+        const joystickKnob = document.getElementById('joystickKnob');
+        const jumpBtnMobile = document.getElementById('jumpBtnMobile');
+        const scanBtnMobile = document.getElementById('scanBtnMobile');
+        const statusText = document.getElementById('status');
+
+        let touchMoveVector = { x: 0, y: 0 };
+        let joystickTouchId = null;
+        let lookTouchId = null;
+        let lastLookX = 0;
+        let lastLookY = 0;
+
+        // JOYSTICK TOUCH LOGIC
+        joystickContainer.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (joystickTouchId !== null) return;
+            const touch = e.changedTouches[0];
+            joystickTouchId = touch.identifier;
+            updateJoystick(touch);
+        }, { passive: false });
+
+        window.addEventListener('touchmove', (e) => {
+            for (let touch of e.changedTouches) {
+                if (touch.identifier === joystickTouchId) {
+                    updateJoystick(touch);
+                } else if (touch.identifier === lookTouchId) {
+                    const dx = touch.clientX - lastLookX;
+                    const dy = touch.clientY - lastLookY;
+                    lastLookX = touch.clientX;
+                    lastLookY = touch.clientY;
+
+                    yaw -= dx * 0.005;
+                    pitch -= dy * 0.005;
+                    pitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, pitch));
+                    const euler = new THREE.Euler(pitch, yaw, 0, 'YXZ');
+                    camera.quaternion.setFromEuler(euler);
+                }
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchend', (e) => {
+            for (let touch of e.changedTouches) {
+                if (touch.identifier === joystickTouchId) {
+                    joystickTouchId = null;
+                    touchMoveVector = { x: 0, y: 0 };
+                    joystickKnob.style.transform = `translate(-50%, -50%)`;
+                } else if (touch.identifier === lookTouchId) {
+                    lookTouchId = null;
+                }
+            }
+        });
+
+        function updateJoystick(touch) {
+            const rect = joystickContainer.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const maxRadius = rect.width / 2;
+
+            if (dist > maxRadius) {
+                dx = (dx / dist) * maxRadius;
+                dy = (dy / dist) * maxRadius;
+            }
+
+            joystickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            touchMoveVector.x = dx / maxRadius;
+            touchMoveVector.y = dy / maxRadius;
+        }
+
+        // TOUCH LOOK CAMERA LOGIC (RIGHT HALF SCREEN)
+        window.addEventListener('touchstart', (e) => {
+            if (currentPlatformMode !== 'MOBILE') return;
+            for (let touch of e.changedTouches) {
+                const target = touch.target;
+                if (target === joystickContainer || target === joystickKnob || 
+                    target === jumpBtnMobile || target === scanBtnMobile || 
+                    target.closest('#coverOverlay') || target.closest('#ui')) {
+                    continue;
+                }
+                if (touch.clientX > window.innerWidth / 3 && lookTouchId === null) {
+                    lookTouchId = touch.identifier;
+                    lastLookX = touch.clientX;
+                    lastLookY = touch.clientY;
+                }
+            }
+        });
+
+        // TOUCH BUTTON ACTIONS
+        scanBtnMobile.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isScanningActive = true;
+            scanBtnMobile.classList.add('active');
+        }, { passive: false });
+
+        scanBtnMobile.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isScanningActive = false;
+            scanBtnMobile.classList.remove('active');
+        }, { passive: false });
+
+        jumpBtnMobile.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            triggerJump();
+        }, { passive: false });
+
+        // MODE SELECTOR BUTTONS
+        const selectPcBtn = document.getElementById('selectPcBtn');
+        const selectMobileBtn = document.getElementById('selectMobileBtn');
+        const startBtn = document.getElementById('startBtn');
+
+        function setPlatformMode(mode) {
+            currentPlatformMode = mode;
+            initAudio();
+            document.getElementById('coverOverlay').style.display = 'none';
+
+            if (mode === 'MOBILE') {
+                document.getElementById('mobileControls').style.display = 'block';
+                startBtn.style.display = 'none';
+                statusText.innerText = "กำลังสแกน (TOUCH)";
+                statusText.style.color = "#00ff66";
+            } else {
+                document.getElementById('mobileControls').style.display = 'none';
+                startBtn.style.display = 'block';
+                document.body.requestPointerLock();
+            }
+        }
+
+        selectPcBtn.addEventListener('click', () => setPlatformMode('PC'));
+        selectMobileBtn.addEventListener('click', () => setPlatformMode('MOBILE'));
+
+        startBtn.addEventListener('click', () => {
+            initAudio();
+            if (currentPlatformMode === 'PC') {
+                document.body.requestPointerLock();
+            }
+        });
+
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement === document.body) {
+                isLocked = true;
+                statusText.innerText = "กำลังสแกนพื้นที่";
+                statusText.style.color = "#00ff66";
+            } else {
+                isLocked = false;
+                if (currentPlatformMode === 'PC') {
+                    statusText.innerText = "หยุดการเชื่อมต่อ";
+                    statusText.style.color = "#ff4444";
+                }
+            }
+        });
+
+        document.addEventListener('mousedown', (e) => {
+            if (isLocked && e.button === 0) {
+                isScanningActive = true;
+            }
+        });
+
+        document.addEventListener('mouseup', (e) => {
+            if (e.button === 0 && currentPlatformMode === 'PC') isScanningActive = false;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isLocked) return;
+
+            const movementX = e.movementX || 0;
+            const movementY = e.movementY || 0;
+
+            yaw -= movementX * 0.0025;
+            pitch -= movementY * 0.0025;
+            pitch = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, pitch));
+
+            const euler = new THREE.Euler(pitch, yaw, 0, 'YXZ');
+            camera.quaternion.setFromEuler(euler);
+        });
+
+        // KEYBOARD CONTROLS
+        const moveState = { forward: false, backward: false, left: false, right: false };
+        let posY = 1.2;
+        let velY = 0;
+        let isGrounded = true;
+
+        function triggerJump() {
+            if (isGrounded) {
+                velY = 0.12;
+                isGrounded = false;
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            if (k === 'w' || k === 'ไ' || e.code === 'ArrowUp') moveState.forward = true;
+            if (k === 's' || k === 'ห' || e.code === 'ArrowDown') moveState.backward = true;
+            if (k === 'a' || k === 'ฟ' || e.code === 'ArrowLeft') moveState.left = true;
+            if (k === 'd' || k === 'ก' || e.code === 'ArrowRight') moveState.right = true;
+
+            if (e.code === 'Space') {
+                triggerJump();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const k = e.key.toLowerCase();
+            if (k === 'w' || k === 'ไ' || e.code === 'ArrowUp') moveState.forward = false;
+            if (k === 's' || k === 'ห' || e.code === 'ArrowDown') moveState.backward = false;
+            if (k === 'a' || k === 'ฟ' || e.code === 'ArrowLeft') moveState.left = false;
+            if (k === 'd' || k === 'ก' || e.code === 'ArrowRight') moveState.right = false;
+        });
+
+        let gameOver = false;
+        const moveSpeed = 0.08;
+        const playerRadius = 0.3;
+
+        function updateMovement() {
+            if (gameOver) return;
+
+            let moveX = 0;
+            let moveZ = 0;
+
+            if (moveState.forward) moveZ -= 1;
+            if (moveState.backward) moveZ += 1;
+            if (moveState.left) moveX -= 1;
+            if (moveState.right) moveX += 1;
+
+            if (touchMoveVector.x !== 0 || touchMoveVector.y !== 0) {
+                moveX = touchMoveVector.x;
+                moveZ = touchMoveVector.y;
+            }
+
+            if (moveX !== 0 || moveZ !== 0) {
+                const dir = new THREE.Vector3(moveX, 0, moveZ);
+                if (dir.length() > 1) dir.normalize();
+                dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+
+                const nextX = camera.position.x + dir.x * moveSpeed;
+                if (!checkWallCollision(nextX, camera.position.z)) {
+                    camera.position.x = nextX;
+                }
+
+                const nextZ = camera.position.z + dir.z * moveSpeed;
+                if (!checkWallCollision(camera.position.x, nextZ)) {
+                    camera.position.z = nextZ;
+                }
+
+                const gridX = Math.round(camera.position.x / TILE_SIZE);
+                const gridZ = Math.round(camera.position.z / TILE_SIZE);
+
+                if (MAP[gridZ] && MAP[gridZ][gridX] === 9) {
+                    if (currentLevelIdx + 1 < LEVELS.length) {
+                        loadLevel(currentLevelIdx + 1);
+                    } else {
+                        gameOver = true;
+                        document.getElementById('endingOverlay').style.display = 'flex';
+                        if (document.pointerLockElement) document.exitPointerLock();
+                    }
+                }
+            }
+
+            // GRAVITY & JUMPING
+            velY -= 0.007;
+            posY += velY;
+
+            if (posY <= 1.2) {
+                posY = 1.2;
+                velY = 0;
+                isGrounded = true;
+            }
+            camera.position.y = posY;
+        }
+
+        function checkWallCollision(x, z) {
+            const points = [
+                { x: x + playerRadius, z: z + playerRadius },
+                { x: x - playerRadius, z: z + playerRadius },
+                { x: x + playerRadius, z: z - playerRadius },
+                { x: x - playerRadius, z: z - playerRadius }
+            ];
+
+            for (let pt of points) {
+                const c = Math.round(pt.x / TILE_SIZE);
+                const r = Math.round(pt.z / TILE_SIZE);
+
+                if (r < 0 || r >= MAP_ROWS || c < 0 || c >= MAP_COLS) return true;
+                const tile = MAP[r][c];
+                if (tile === 1) return true;
+            }
+            return false;
+        }
+
+        const miniCanvas = document.getElementById('minimap');
+        const miniCtx = miniCanvas.getContext('2d');
+
+        function drawMinimap() {
+            const scaleX = miniCanvas.width / MAP_COLS;
+            const scaleY = miniCanvas.height / MAP_ROWS;
+
+            miniCtx.fillStyle = '#000';
+            miniCtx.fillRect(0, 0, miniCanvas.width, miniCanvas.height);
+
+            const playerC = camera.position.x / TILE_SIZE;
+            const playerR = camera.position.z / TILE_SIZE;
+
+            miniCtx.fillStyle = LEVELS[currentLevelIdx].color;
+            miniCtx.beginPath();
+            miniCtx.arc(playerC * scaleX, playerR * scaleY, 3, 0, Math.PI * 2);
+            miniCtx.fill();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (isScanningActive) {
+                fireLidarScan();
+            } else {
+                battery = Math.min(100, battery + 0.2);
+            }
+
+            const batteryBar = document.getElementById('batteryBar');
+            batteryBar.style.width = battery + '%';
+            batteryBar.style.backgroundColor = (battery < 25) ? '#ff3333' : (battery < 60 ? '#ffaa00' : '#00ff66');
+
+            updateMovement();
+            drawMinimap();
+            renderer.render(scene, camera);
+        }
+
+        loadLevel(0);
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
